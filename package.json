@@ -1,0 +1,28 @@
+{
+  "name": "moleculer-ws",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikSmith/moleculer-ws.git"
+  },
+  "keywords": [
+    "moleculer",
+    "websocket",
+    "gateway"
+  ],
+  "author": "NikSmith",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/NikSmith/moleculer-ws/issues"
+  },
+  "homepage": "https://github.com/NikSmith/moleculer-ws#readme",
+  "dependencies": {
+    "moleculer": "^0.13.11",
+    "ws": "^7.2.0"
+  }
+}
