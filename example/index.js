@@ -55,11 +55,11 @@ broker.start();
 /* 
   Browser example:
 
-  var ws = new WebSocket('ws://localhost:3005/?jwt=wedwed'); 
+  var ws = new WebSocket('ws://localhost:3005'); 
   ws.onmessage = (data) => {console.log(data.data)};
 
   1. ws.send('{"action":"ping.pong", "params": {}')
   2. ws.send('{"action":"cmd.echo", "params": {"data": "text"}}')
-  3. ws.send('{"action":"cmd.error", "params": {}}')s
+  3. ws.send('{"action":"cmd.error", "params": {}}')
 
 */
