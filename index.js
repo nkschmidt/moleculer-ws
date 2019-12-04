@@ -3,7 +3,6 @@ const WebSocket = require('ws');
 const { Errors } = require('moleculer');
 
 module.exports = {
-  middlewares: {},
   settings: {
     port: 3000,
     routes: []
