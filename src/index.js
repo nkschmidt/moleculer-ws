@@ -36,6 +36,9 @@ module.exports = {
     runMiddlewares(middlewares, ctx, fn) {
       let iterator = 0;
       let middleware = middlewares[iterator];
+      if (typeof middleware === 'string') {
+        middleware = this[middleware];
+      }
       if (!middleware) return fn();
       let next = (err) => {
         if (err) {
@@ -43,7 +46,10 @@ module.exports = {
         }
         iterator++;
         if (iterator < middlewares.length) {
-          middleware = middlewares[iterator]
+          middleware = middlewares[iterator];
+          if (typeof middleware === 'string') {
+            middleware = this[middleware];
+          }
           middleware(ctx, next);
         } else {
           fn();
