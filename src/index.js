@@ -75,7 +75,7 @@ module.exports = {
       let ctx = { meta: {}, route, action, params, ws };
       this.runMiddlewares(route.middlewares, ctx, () => {
         this.broker.call(action, params, {
-          meta: { ...ctx.meta, websocketId: ws.id }
+          meta: { websocketId: ws.id, user: ws.user, ...ctx.meta }
         })
           .then(res => ws.json(res))
           .catch(err => {
