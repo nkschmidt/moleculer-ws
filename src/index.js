@@ -1,6 +1,7 @@
 const http = require('http');
 const WebSocket = require('ws');
 const { Errors } = require('moleculer');
+const uuidv4 = require('uuid/v4');
 
 module.exports = {
   settings: {
@@ -67,14 +68,14 @@ module.exports = {
           err
         }));
       }
-      let { action, params = {}, opts = {} } = data;
+      let { action, params = {} } = data;
       if (!action) return;
       const route = this.resolveRouter(action);
       if (!route && this.settings.routes.length) return;
-      let ctx = { meta: {}, route, action, params, ws, opts };
+      let ctx = { meta: {}, route, action, params, ws };
       this.runMiddlewares(route.middlewares, ctx, () => {
         this.broker.call(action, params, {
-          meta: ctx.meta
+          meta: { ...ctx.meta, websocketId: ws.id }
         })
           .then(res => ws.json(res))
           .catch(err => {
@@ -96,6 +97,7 @@ module.exports = {
   started() {
     this.server.listen(this.settings.port);
     this.ws.on('connection', (ws) => {
+      ws.id = uuidv4();
       ws.json = (data) => { ws.send(JSON.stringify(data)) };
       ws.on('message', (msg) => this.onMessage(ws, msg));
     });
