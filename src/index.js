@@ -75,7 +75,10 @@ module.exports = {
       this.runMiddlewares(route.middlewares, ctx, () => {
         this.broker.call(action, params, opts)
           .then(res => ws.json(res))
-          .catch(err => ws.json(err));
+          .catch(err => {
+            let { message, code, type, data } = err;
+            ws.json({ message, code, type, data });
+          });
       });
     }
   },
