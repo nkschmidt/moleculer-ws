@@ -34,7 +34,7 @@ module.exports = {
       }
       return null;
     },
-    runMiddlewares(middlewares, ctx, fn) {
+    runMiddlewares(middlewares = [], ctx, fn) {
       let iterator = 0;
       let middleware = middlewares[iterator];
       if (typeof middleware === 'string') {
