@@ -71,9 +71,11 @@ module.exports = {
       if (!action) return;
       const route = this.resolveRouter(action);
       if (!route && this.settings.routes.length) return;
-      let ctx = { route, action, params, ws, opts };
+      let ctx = { meta: {}, route, action, params, ws, opts };
       this.runMiddlewares(route.middlewares, ctx, () => {
-        this.broker.call(action, params, opts)
+        this.broker.call(action, params, {
+          meta: ctx.meta
+        })
           .then(res => ws.json(res))
           .catch(err => {
             let { message, code, type, data } = err;
