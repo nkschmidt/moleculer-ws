@@ -77,7 +77,11 @@ module.exports = {
         this.broker.call(action, params, {
           meta: { websocketId: ws.id, ...ctx.meta }
         })
-          .then(res => ws.json(res))
+          .then(res => {
+            if (!res) return;
+            res.transaction = data.transaction;
+            ws.json(res);
+          })
           .catch(err => {
             let { message, code, type, data } = err;
             ws.json({ message, code, type, data });
