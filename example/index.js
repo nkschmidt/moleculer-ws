@@ -17,8 +17,17 @@ broker.createService({
     port: 3005,
     routes: [
       // describe routes (If it is empty, it will redirects all requests to services)
+      /*
       {
         action: '*.*', // can be string like 'users.list' or RegExp like /^users.[0-9]+$/
+        middlewares: [ // array of functions or name of method
+          (ctx, next) => next(),
+          'middlewareTest'
+        ] 
+      },
+      */
+      {
+        action: '$node.actions', // can be string like 'users.list' or RegExp like /^users.[0-9]+$/
         middlewares: [ // array of functions or name of method
           (ctx, next) => next(),
           'middlewareTest'
@@ -45,6 +54,7 @@ broker.createService({
         let err = new Error('test error');
         return next(err);
       }
+      console.log('middleware', ctx.action);
       return next();
     }
   }

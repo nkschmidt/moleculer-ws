@@ -1,12 +1,17 @@
-const http = require('http');
-const WebSocket = require('ws');
 const { Errors } = require('moleculer');
 const uuidv4 = require('uuid/v4');
+const uWS = require('uWebSockets.js');
+let listenSocket;
 
 module.exports = {
   settings: {
     port: 3000,
-    routes: []
+    routes: [],
+    options: {
+      compression: 0,
+      maxPayloadLength: 16 * 1024 * 1024,
+      idleTimeout: 0
+    },
   },
   methods: {
     prepareRoute(route) {
@@ -14,6 +19,7 @@ module.exports = {
         route.pattern = route.action;
         return route;
       }
+      route.action = route.action.replace(/[$]/g, '\\$&');
       let pattern = '';
       if (route.action[0] !== '^') {
         pattern += '^' + route.action.replace(/\*/g, '\\w+', 'g');
@@ -61,7 +67,7 @@ module.exports = {
     onMessage(ws, msg) {
       let data = {};
       try {
-        data = JSON.parse(msg);
+        data = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(msg)));
       } catch (err) {
         return ws.json(new Errors.MoleculerError("Invalid request body", 400, "INVALID_REQUEST_BODY", {
           body: msg,
@@ -87,11 +93,37 @@ module.exports = {
             ws.json({ message, code, type, data });
           });
       });
-    }
+    },
+    onOpen(ws) {},
+    createWSServer() {
+      this.ws = uWS.App({}).ws('/*', {
+        ...this.settings.options,
+        open: (ws, req) => {
+          ws.id = uuidv4();
+          ws.json = (data) => { ws.send(JSON.stringify(data)) };
+          this.clients[ws.id] = ws;
+          this.onOpen && this.onOpen(ws);
+        },
+        message: this.onMessage,
+        drain: (ws) => {},
+        close: (ws, code, message) => {
+          delete this.clients[ws.id];
+        }
+      }).any('/*', (res, req) => {
+        res.end('');
+      }).listen(this.settings.port, (token) => {
+        listenSocket = token;
+        if (token) {
+          this.logger.info('Listening to port ' + this.settings.port);
+        } else {
+          this.logger.fatal('Failed to listen to port ' + this.settings.port);
+        }
+      });
+    },
   },
+  
   created() {
-    this.server = http.createServer();
-    this.ws = new WebSocket.Server({ server: this.server });
+    this.clients = {};
     // Prepare routes array
     let routes = this.settings.routes;
     for (let i=0; i < routes.length; i++) {
@@ -99,14 +131,12 @@ module.exports = {
     }
   },
   started() {
-    this.server.listen(this.settings.port);
-    this.ws.on('connection', (ws) => {
-      ws.id = uuidv4();
-      ws.json = (data) => { ws.send(JSON.stringify(data)) };
-      ws.on('message', (msg) => this.onMessage(ws, msg));
-    });
+    this.createWSServer();
   },
   stopped() {
-    this.server.close();
+    if (listenSocket) {
+      uWS.us_listen_socket_close(listenSocket);
+      listenSocket = null;
+    }
   }
 };
