@@ -1,16 +1,14 @@
 const { Errors } = require('moleculer');
 const uuidv4 = require('uuid/v4');
-const uWS = require('uWebSockets.js');
-let listenSocket;
+const WebSocket = require('ws');
 
 module.exports = {
   settings: {
     port: 3000,
     routes: [],
     options: {
-      compression: 0,
-      maxPayloadLength: 16 * 1024 * 1024,
-      idleTimeout: 0
+      clientTracking: false,
+      perMessageDeflate: false
     },
   },
   methods: {
@@ -67,7 +65,7 @@ module.exports = {
     onMessage(ws, msg) {
       let data = {};
       try {
-        data = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(msg)));
+        data = JSON.parse(msg);
       } catch (err) {
         return ws.json(new Errors.MoleculerError("Invalid request body", 400, "INVALID_REQUEST_BODY", {
           body: msg,
@@ -94,31 +92,64 @@ module.exports = {
           });
       });
     },
-    onOpen(ws) {},
-    createWSServer() {
-      this.ws = uWS.App({}).ws('/*', {
-        ...this.settings.options,
-        open: (ws, req) => {
-          ws.id = uuidv4();
-          ws.json = (data) => { ws.send(JSON.stringify(data)) };
-          this.clients[ws.id] = ws;
-          this.onOpen && this.onOpen(ws);
-        },
-        message: this.onMessage,
-        drain: (ws) => {},
-        close: (ws, code, message) => {
-          delete this.clients[ws.id];
-        }
-      }).any('/*', (res, req) => {
-        res.end('');
-      }).listen(this.settings.port, (token) => {
-        listenSocket = token;
-        if (token) {
-          this.logger.info('Listening to port ' + this.settings.port);
+    onOpen(ws) {
+      ws.id = uuidv4();
+      ws.channels = [];
+      ws.json = (data) => { ws.send(JSON.stringify(data)) };
+      ws.subscribe = (ch) => {
+        let exists = ws.channels.includes(ch);
+        if (exists) return;
+        ws.channels.push(ch);
+        if (!this.ws.channels[ch]) {
+          this.ws.channels[ch] = [ws.id];
         } else {
-          this.logger.fatal('Failed to listen to port ' + this.settings.port);
+          this.ws.channels[ch].push(ws.id);
         }
+      }
+      ws.unsubscribe = (ch) => {
+        let index = ws.channels.indexOf(ch);
+        if (index > -1) {
+          ws.channels.splice(index, 1);
+        }
+        if (this.ws.channels[ch]) {
+          index = this.ws.channels[ch].indexOf(ws.id);
+          if (index === -1) return; 
+          this.ws.channels[ch].splice(index, 1);
+          if (this.ws.channels[ch].length === 0) {
+            delete this.ws.channels[ch];
+          }
+        }
+      }
+      ws.unsubscribeAll = () => {
+        ws.channels.forEach(ch => {
+          let index = this.ws.channels[ch].indexOf(ws.id);
+          if (index > -1) {
+            this.ws.channels[ch].splice(index, 1);
+          }
+          if (this.ws.channels[ch].length === 0) {
+            delete this.ws.channels[ch];
+          }
+        });
+      }
+      this.clients[ws.id] = ws;
+      
+      ws.on('message', (msg) => this.onMessage(ws, msg));
+      ws.on('close', (code) => {
+        ws.unsubscribeAll();
+        delete this.clients[ws.id];
       });
+    },
+    createWSServer() {
+      this.ws = new WebSocket.Server({
+        ...this.settings.options,
+        port: this.settings.port
+      });
+      this.ws.channels = {};
+      this.ws.publish = (ch, data) => {
+        if (!this.ws.channels[ch]) return;
+        this.ws.channels[ch].forEach(it => { this.clients[it].send(data) });
+      };
+      this.ws.on('connection', this.onOpen);
     },
   },
   
@@ -133,10 +164,5 @@ module.exports = {
   started() {
     this.createWSServer();
   },
-  stopped() {
-    if (listenSocket) {
-      uWS.us_listen_socket_close(listenSocket);
-      listenSocket = null;
-    }
-  }
+  stopped() {}
 };

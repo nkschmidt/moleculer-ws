@@ -17,7 +17,7 @@ broker.createService({
     port: 3005,
     routes: [
       // describe routes (If it is empty, it will redirects all requests to services)
-      /*
+      
       {
         action: '*.*', // can be string like 'users.list' or RegExp like /^users.[0-9]+$/
         middlewares: [ // array of functions or name of method
@@ -25,7 +25,7 @@ broker.createService({
           'middlewareTest'
         ] 
       },
-      */
+      /*
       {
         action: '$node.actions', // can be string like 'users.list' or RegExp like /^users.[0-9]+$/
         middlewares: [ // array of functions or name of method
@@ -33,15 +33,17 @@ broker.createService({
           'middlewareTest'
         ] 
       }
+      */
     ]
   },
   events: {
     // subscribe events
-		"ws.*"(payload, sender, event) {
-      this.ws.clients.forEach(ws => {
-        ws.json(payload);
-      })
-		}
+		"events.test"(payload, sender, event) {
+      this.ws.publish('event', JSON.stringify(payload));
+    },
+    "events.subscribe"(payload) {
+      this.clients[payload.id].subscribe('event')
+    }
   },
   methods: {
     middlewareTest(ctx, next) {
