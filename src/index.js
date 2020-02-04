@@ -78,10 +78,9 @@ module.exports = {
       if (!route && this.settings.routes.length) return;
       let ctx = { meta: {}, route, action, params, ws };
       this.runMiddlewares(route.middlewares, ctx, () => {
-        this.broker.call(action, params, {
-          meta: { websocketId: ws.id, ...ctx.meta }
-        })
-          .then(res => {
+        var p = this.broker.call(action, params, { meta: { websocketId: ws.id, ...ctx.meta }});
+        if (!route.async) {
+          p.then(res => {
             if (!res) return;
             res.transaction = data.transaction;
             ws.json(res);
@@ -90,6 +89,7 @@ module.exports = {
             let { message, code, type, data } = err;
             ws.json({ message, code, type, data });
           });
+        }   
       });
     },
     onOpen(ws) {
