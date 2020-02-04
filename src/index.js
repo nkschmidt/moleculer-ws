@@ -79,20 +79,10 @@ module.exports = {
       if (!route && this.settings.routes.length) return;
       let ctx = { meta: {}, route, action, params, ws };
       this.runMiddlewares(route.middlewares, ctx, () => {
-        var p = this.broker.call(action, params, { 
-          meta: { requestStartedAt: timestamp, transaction: data.transaction, websocketId: ws.id, ...ctx.meta }
+        action = route.local ? "$" + action : action;
+        this.broker.emit(action, params, {
+          meta: { timestamp, transaction: data.transaction, websocketId: ws.id, ...ctx.meta }
         });
-        if (!route.async) {
-          p.then(res => {
-            if (!res) return;
-            res.transaction = data.transaction;
-            ws.json(res);
-          })
-          .catch(err => {
-            let { message, code, type, data } = err;
-            ws.json({ message, code, type, data });
-          });
-        }   
       });
     },
     onOpen(ws) {
