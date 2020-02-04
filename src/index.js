@@ -63,6 +63,7 @@ module.exports = {
       middleware(ctx, next);
     },
     onMessage(ws, msg) {
+      let timestamp = new Date().getTime();
       let data = {};
       try {
         data = JSON.parse(msg);
@@ -78,7 +79,9 @@ module.exports = {
       if (!route && this.settings.routes.length) return;
       let ctx = { meta: {}, route, action, params, ws };
       this.runMiddlewares(route.middlewares, ctx, () => {
-        var p = this.broker.call(action, params, { meta: { websocketId: ws.id, ...ctx.meta }});
+        var p = this.broker.call(action, params, { 
+          meta: { requestStartedAt: timestamp, transaction: data.transaction, websocketId: ws.id, ...ctx.meta }
+        });
         if (!route.async) {
           p.then(res => {
             if (!res) return;
