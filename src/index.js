@@ -127,8 +127,9 @@ module.exports = {
       this.clients[ws.id] = ws;
       
       ws.on('message', (msg) => this.onMessage(ws, msg));
-      ws.on('close', (code) => {
+      ws.on('close', () => {
         ws.unsubscribeAll();
+        this.onClose && this.onClose(ws);
         delete this.clients[ws.id];
       });
     },
