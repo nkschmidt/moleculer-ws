@@ -72,7 +72,7 @@ module.exports = {
       if (request.type !== "request") return;
       const { payload } = request;
       const route = this.resolveRouter(payload.method);
-      if (!route && this.settings.routes.length) {
+      if (!route) {
         return ws.json(jsonrpc.error(request.payload.id, new jsonrpc.JsonRpcError('Unknown method', 404)));
       }
       let ctx = { meta: { id: payload.id }, route, action: payload.method, params: payload.params, ws };
