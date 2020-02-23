@@ -48,7 +48,7 @@ module.exports = {
       if (!middleware) return fn();
       let next = (err) => {
         if (err) {
-          return ctx.ws.json(jsonrpc.error(0, new jsonrpc.JsonRpcError(err.message, err.code || 500)));
+          return ctx.ws.json(jsonrpc.error(ctx.params.id || 0, new jsonrpc.JsonRpcError(err.message, err.code || 500)));
         }
         iterator++;
         if (iterator < middlewares.length) {
@@ -67,13 +67,13 @@ module.exports = {
       let timestamp = new Date().getTime();
       const request = jsonrpc.parse(msg);
       if (request.type === "invalid") {
-        return ws.json(jsonrpc.error(request.id || 0, request.payload));
+        return ws.json(jsonrpc.error(request.payload.id || 0, request.payload));
       };
       if (request.type !== "request") return;
       const { payload } = request;
       const route = this.resolveRouter(payload.method);
       if (!route && this.settings.routes.length) {
-        return ws.json(jsonrpc.error(0, new jsonrpc.JsonRpcError('Unknown method', 404)));
+        return ws.json(jsonrpc.error(request.payload.id, new jsonrpc.JsonRpcError('Unknown method', 404)));
       }
       let ctx = { meta: {}, route, action: payload.method, params: payload, ws };
       const middlewares = (this.settings.middlewares || []).concat(route.middlewares || []);
