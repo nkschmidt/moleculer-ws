@@ -75,11 +75,11 @@ module.exports = {
       if (!route && this.settings.routes.length) {
         return ws.json(jsonrpc.error(request.payload.id, new jsonrpc.JsonRpcError('Unknown method', 404)));
       }
-      let ctx = { meta: {}, route, action: payload.method, params: payload, ws };
+      let ctx = { meta: { id: payload.id }, route, action: payload.method, params: payload.params, ws };
       const middlewares = (this.settings.middlewares || []).concat(route.middlewares || []);
       this.runMiddlewares(middlewares, ctx, () => {
         let action = route.local ? "$" + payload.method : payload.method;
-        this.broker.emit(action, payload, { meta: { timestamp, websocketId: ws.id, ...ctx.meta }});
+        this.broker.emit(action, payload.params, { meta: { timestamp, websocketId: ws.id, ...ctx.meta }});
       });      
     },
     onOpen(ws) {
