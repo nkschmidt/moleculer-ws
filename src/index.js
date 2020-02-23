@@ -1,11 +1,12 @@
-const { Errors } = require('moleculer');
 const uuidv4 = require('uuid/v4');
 const WebSocket = require('ws');
+const jsonrpc = require('jsonrpc-lite')
 
 module.exports = {
   settings: {
     port: 3000,
     routes: [],
+    middlewares: [],
     options: {
       clientTracking: false,
       perMessageDeflate: false
@@ -47,7 +48,7 @@ module.exports = {
       if (!middleware) return fn();
       let next = (err) => {
         if (err) {
-          return ctx.ws.json(new Errors.MoleculerError(err.message, 500, err.type));
+          return ctx.ws.json(jsonrpc.error(0, new jsonrpc.JsonRpcError(err.message, err.code || 500)));
         }
         iterator++;
         if (iterator < middlewares.length) {
@@ -64,26 +65,22 @@ module.exports = {
     },
     onMessage(ws, msg) {
       let timestamp = new Date().getTime();
-      let data = {};
-      try {
-        data = JSON.parse(msg);
-      } catch (err) {
-        return ws.json(new Errors.MoleculerError("Invalid request body", 400, "INVALID_REQUEST_BODY", {
-          body: msg,
-          err
-        }));
+      const request = jsonrpc.parse(msg);
+      if (request.type === "invalid") {
+        return ws.json(jsonrpc.error(request.id || 0, request.payload));
+      };
+      if (request.type !== "request") return;
+      const { payload } = request;
+      const route = this.resolveRouter(payload.method);
+      if (!route && this.settings.routes.length) {
+        return ws.json(jsonrpc.error(0, new jsonrpc.JsonRpcError('Unknown method', 404)));
       }
-      let { action, params = {} } = data;
-      if (!action) return;
-      const route = this.resolveRouter(action);
-      if (!route && this.settings.routes.length) return;
-      let ctx = { meta: {}, route, action, params, ws };
-      this.runMiddlewares(route.middlewares, ctx, () => {
-        action = route.local ? "$" + action : action;
-        this.broker.emit(action, params, {
-          meta: { timestamp, transaction: data.transaction, websocketId: ws.id, ...ctx.meta }
-        });
-      });
+      let ctx = { meta: {}, route, action: payload.method, params: payload, ws };
+      const middlewares = (this.settings.middlewares || []).concat(route.middlewares || []);
+      this.runMiddlewares(middlewares, ctx, () => {
+        let action = route.local ? "$" + payload.method : payload.method;
+        this.broker.emit(action, payload, { meta: { timestamp, websocketId: ws.id, ...ctx.meta }});
+      });      
     },
     onOpen(ws) {
       ws.id = uuidv4();
@@ -134,10 +131,7 @@ module.exports = {
       });
     },
     createWSServer() {
-      this.ws = new WebSocket.Server({
-        ...this.settings.options,
-        port: this.settings.port
-      });
+      this.ws = new WebSocket.Server({ ...this.settings.options, port: this.settings.port });
       this.ws.channels = {};
       this.ws.publish = (ch, data) => {
         if (!this.ws.channels[ch]) return;
@@ -148,6 +142,7 @@ module.exports = {
   },
   
   created() {
+    this.jsonrpc = jsonrpc;
     this.clients = {};
     // Prepare routes array
     let routes = this.settings.routes;
@@ -158,5 +153,7 @@ module.exports = {
   started() {
     this.createWSServer();
   },
-  stopped() {}
+  stopped() {
+    this.ws.close();
+  }
 };
