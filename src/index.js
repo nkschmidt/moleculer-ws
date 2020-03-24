@@ -9,7 +9,8 @@ module.exports = {
     middlewares: [],
     options: {
       clientTracking: false,
-      perMessageDeflate: false
+      perMessageDeflate: false,
+      maxPayload: 200 * 1024 * 1024
     },
   },
   methods: {
