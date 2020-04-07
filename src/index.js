@@ -49,7 +49,7 @@ module.exports = {
       if (!middleware) return fn();
       let next = (err) => {
         if (err) {
-          return ctx.ws.json(jsonrpc.error(ctx.params.id || 0, new jsonrpc.JsonRpcError(err.message, err.code || 500)));
+          return ctx.ws.json(jsonrpc.error(ctx.meta.id || 0, new jsonrpc.JsonRpcError(err.message, err.code || 500)));
         }
         iterator++;
         if (iterator < middlewares.length) {
