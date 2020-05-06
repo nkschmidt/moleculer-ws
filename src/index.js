@@ -9,7 +9,6 @@ module.exports = {
     middlewares: [],
     options: {
       clientTracking: false,
-      perMessageDeflate: false,
       maxPayload: 200 * 1024 * 1024
     },
   },
@@ -139,6 +138,7 @@ module.exports = {
         this.ws.channels[ch].forEach(it => { this.clients[it].send(data) });
       };
       this.ws.on('connection', this.onOpen);
+      this.ws.on('error', this.logger.error);
     },
   },
   
