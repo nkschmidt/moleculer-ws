@@ -129,6 +129,7 @@ module.exports = {
         this.onClose && this.onClose(ws);
         delete this.clients[ws.id];
       });
+      ws.on('error', this.logger.error);
     },
     createWSServer() {
       this.ws = new WebSocket.Server({ ...this.settings.options, port: this.settings.port });
