@@ -129,7 +129,13 @@ module.exports = {
         this.onClose && this.onClose(ws);
         delete this.clients[ws.id];
       });
-      ws.on('error', this.logger.error);
+      ws.on('error', (err) => {
+        if (err.message === "Invalid WebSocket frame: RSV1 must be clear") {
+          this.logger.warn(err)
+          return
+        }
+        this.logger.error(err)
+      });
     },
     createWSServer() {
       this.ws = new WebSocket.Server({ ...this.settings.options, port: this.settings.port });
