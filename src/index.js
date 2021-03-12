@@ -22,7 +22,7 @@ module.exports = {
       let pattern = '';
       if (route.action[0] !== '^') {
         pattern += '^' + route.action.replace(/\*/g, '\\w+', 'g');
-      } 
+      }
       if (pattern[pattern.length - 1] !== '$') {
         pattern += '$';
       }
@@ -80,7 +80,7 @@ module.exports = {
       this.runMiddlewares(middlewares, ctx, () => {
         let action = route.local ? "$" + payload.method : payload.method;
         this.broker.emit(action, payload.params, { meta: { timestamp, websocketId: ws.id, ...ctx.meta }});
-      });      
+      });
     },
     onOpen(ws) {
       ws.id = uuidv4();
@@ -103,7 +103,7 @@ module.exports = {
         }
         if (this.ws.channels[ch]) {
           index = this.ws.channels[ch].indexOf(ws.id);
-          if (index === -1) return; 
+          if (index === -1) return;
           this.ws.channels[ch].splice(index, 1);
           if (this.ws.channels[ch].length === 0) {
             delete this.ws.channels[ch];
@@ -122,7 +122,7 @@ module.exports = {
         });
       }
       this.clients[ws.id] = ws;
-      
+
       ws.on('message', (msg) => this.onMessage(ws, msg));
       ws.on('close', () => {
         ws.unsubscribeAll();
@@ -140,15 +140,18 @@ module.exports = {
     createWSServer() {
       this.ws = new WebSocket.Server({ ...this.settings.options, port: this.settings.port });
       this.ws.channels = {};
-      this.ws.publish = (ch, data) => {
+      this.ws.publish = (ch, data, exclude) => {
         if (!this.ws.channels[ch]) return;
-        this.ws.channels[ch].forEach(it => { this.clients[it].send(data) });
+        this.ws.channels[ch].forEach(it => {
+          if (exclude && exclude.indexOf(it) !== -1) return;
+          this.clients[it].send(data)
+        });
       };
       this.ws.on('connection', this.onOpen);
       this.ws.on('error', this.logger.error);
     },
   },
-  
+
   created() {
     this.jsonrpc = jsonrpc;
     this.clients = {};
