@@ -65,7 +65,7 @@ module.exports = {
       middleware(ctx, next);
     },
     onMessage(ws, msg) {
-      this.pingUpdate(ws);
+      this.ping(ws);
       let timestamp = new Date().getTime();
       const request = jsonrpc.parse(msg);
       if (request.type === "invalid") {
