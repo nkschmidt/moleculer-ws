@@ -2,6 +2,8 @@ const uuidv4 = require('uuid/v4');
 const WebSocket = require('ws');
 const jsonrpc = require('jsonrpc-lite')
 
+function noop() {}
+
 module.exports = {
   settings: {
     port: 3000,
@@ -9,7 +11,8 @@ module.exports = {
     middlewares: [],
     options: {
       clientTracking: false,
-      maxPayload: 200 * 1024 * 1024
+      maxPayload: 200 * 1024 * 1024,
+      pingInterval: 60 * 1000,
     },
   },
   methods: {
@@ -65,6 +68,7 @@ module.exports = {
     },
     onMessage(ws, msg) {
       let timestamp = new Date().getTime();
+      ws.communicatedAt = timestamp;
       const request = jsonrpc.parse(msg);
       if (request.type === "invalid") {
         return ws.json(jsonrpc.error(request.payload.id || 0, request.payload));
@@ -136,6 +140,7 @@ module.exports = {
         }
         this.logger.error(err)
       });
+      ws.communicatedAt = Date.now();
     },
     createWSServer() {
       this.ws = new WebSocket.Server({ ...this.settings.options, port: this.settings.port });
@@ -149,6 +154,20 @@ module.exports = {
       };
       this.ws.on('connection', this.onOpen);
       this.ws.on('error', this.logger.error);
+
+      const pingInterval = this.settings.options.pingInterval;
+      this.pingIntervalHandler = setInterval(() => {
+        const timestamp = Date.now();
+        // we won't need to go through all clients on each setInterval iteration if we store clients sorted by 'communicatedAt'
+        for (const clientId in this.clients) {
+          const client = this.clients[clientId]
+          if (timestamp - client.communicatedAt >= pingInterval) {
+            client.communicatedAt = timestamp - 1000; // -1000 to compensate for time spend sending pings
+            // maybe we will need to limit the number of simultaneous pings if a lot of clients start sending pongs
+            client.ping(noop);
+          }
+        }
+      }, pingInterval / 4); // max ping delay is 1/4 of pingInterval
     },
   },
 
@@ -165,6 +184,7 @@ module.exports = {
     this.createWSServer();
   },
   stopped() {
+    clearInterval(this.pingIntervalHandler);
     this.ws.close();
   }
 };
