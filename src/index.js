@@ -156,18 +156,29 @@ module.exports = {
       this.ws.on('error', this.logger.error);
 
       const pingInterval = this.settings.options.pingInterval;
-      this.pingIntervalHandler = setInterval(() => {
-        const timestamp = Date.now();
+      const pinger = async () => {
+        let timestamp = Date.now();
+        let pingsCounter = 0;
+        const maxSimultaneousPings = 2000;
+        const delayBetweenPingsSimultaneousDelay = 1000;
         // we won't need to go through all clients on each setInterval iteration if we store clients sorted by 'communicatedAt'
         for (const clientId in this.clients) {
+          // limit the number of simultaneous pings
+          if (pingsCounter && !(pingsCounter % maxSimultaneousPings)) {
+            await new Promise(r => setTimeout(r, delayBetweenPingsSimultaneousDelay));
+            timestamp += delayBetweenPingsSimultaneousDelay;
+          }
+
           const client = this.clients[clientId]
           if (timestamp - client.communicatedAt >= pingInterval) {
-            client.communicatedAt = timestamp - 1000; // -1000 to compensate for time spend sending pings
-            // maybe we will need to limit the number of simultaneous pings if a lot of clients start sending pongs
+            ++pingsCounter;
+            client.communicatedAt = timestamp;
             client.ping(noop);
           }
         }
-      }, pingInterval / 4); // max ping delay is 1/4 of pingInterval
+        this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4);
+      }
+      this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4); // max ping delay is 1/4 of pingInterval
     },
   },
 
