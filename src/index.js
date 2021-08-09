@@ -161,7 +161,7 @@ module.exports = {
         let pingsCounter = 0;
         const maxSimultaneousPings = 2000;
         const delayBetweenPingsSimultaneousDelay = 1000;
-        // we won't need to go through all clients on each setInterval iteration if we store clients sorted by 'communicatedAt'
+        // we won't need to go through all clients on each iteration if we store clients sorted by 'communicatedAt'
         for (const clientId in this.clients) {
           // limit the number of simultaneous pings
           if (pingsCounter && !(pingsCounter % maxSimultaneousPings)) {
@@ -169,10 +169,10 @@ module.exports = {
             timestamp += delayBetweenPingsSimultaneousDelay;
           }
 
-          const client = this.clients[clientId]
+          const client = this.clients[clientId];
           if (timestamp - client.communicatedAt >= pingInterval) {
             ++pingsCounter;
-            client.communicatedAt = timestamp;
+            client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift
             client.ping(noop);
           }
         }
