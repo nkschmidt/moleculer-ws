@@ -13,6 +13,8 @@ module.exports = {
       clientTracking: false,
       maxPayload: 200 * 1024 * 1024,
       pingInterval: 60 * 1000,
+      maxSimultaneousPings: 2000,
+      delayBetweenPingsSimultaneousDelay: 1000,
     },
   },
   methods: {
@@ -156,11 +158,11 @@ module.exports = {
       this.ws.on('error', this.logger.error);
 
       const pingInterval = this.settings.options.pingInterval;
+      const maxSimultaneousPings = this.settings.options.maxSimultaneousPings;
+      const delayBetweenPingsSimultaneousDelay = this.settings.options.delayBetweenPingsSimultaneousDelay;
       const pinger = async () => {
         let timestamp = Date.now();
         let pingsCounter = 0;
-        const maxSimultaneousPings = 2000;
-        const delayBetweenPingsSimultaneousDelay = 1000;
         // we won't need to go through all clients on each iteration if we store clients sorted by 'communicatedAt'
         for (const clientId in this.clients) {
           // limit the number of simultaneous pings
