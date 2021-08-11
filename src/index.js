@@ -2,6 +2,8 @@ const uuidv4 = require('uuid/v4');
 const WebSocket = require('ws');
 const jsonrpc = require('jsonrpc-lite')
 
+function noop() {}
+
 module.exports = {
   settings: {
     port: 3000,
@@ -9,7 +11,10 @@ module.exports = {
     middlewares: [],
     options: {
       clientTracking: false,
-      maxPayload: 200 * 1024 * 1024
+      maxPayload: 200 * 1024 * 1024,
+      pingInterval: 60 * 1000,
+      maxSimultaneousPings: 2000,
+      delayBetweenPingsSimultaneousDelay: 1000,
     },
   },
   methods: {
@@ -65,6 +70,7 @@ module.exports = {
     },
     onMessage(ws, msg) {
       let timestamp = new Date().getTime();
+      ws.communicatedAt = timestamp;
       const request = jsonrpc.parse(msg);
       if (request.type === "invalid") {
         return ws.json(jsonrpc.error(request.payload.id || 0, request.payload));
@@ -136,6 +142,7 @@ module.exports = {
         }
         this.logger.error(err)
       });
+      ws.communicatedAt = Date.now();
     },
     createWSServer() {
       this.ws = new WebSocket.Server({ ...this.settings.options, port: this.settings.port });
@@ -149,6 +156,31 @@ module.exports = {
       };
       this.ws.on('connection', this.onOpen);
       this.ws.on('error', this.logger.error);
+
+      const pingInterval = this.settings.options.pingInterval;
+      const maxSimultaneousPings = this.settings.options.maxSimultaneousPings;
+      const delayBetweenPingsSimultaneousDelay = this.settings.options.delayBetweenPingsSimultaneousDelay;
+      const pinger = async () => {
+        let timestamp = Date.now();
+        let pingsCounter = 0;
+        // we won't need to go through all clients on each iteration if we store clients sorted by 'communicatedAt'
+        for (const clientId in this.clients) {
+          // limit the number of simultaneous pings
+          if (pingsCounter && !(pingsCounter % maxSimultaneousPings)) {
+            await new Promise(r => setTimeout(r, delayBetweenPingsSimultaneousDelay));
+            timestamp += delayBetweenPingsSimultaneousDelay;
+          }
+
+          const client = this.clients[clientId];
+          if (timestamp - client.communicatedAt >= pingInterval) {
+            ++pingsCounter;
+            client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift
+            client.ping(noop);
+          }
+        }
+        this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4);
+      }
+      this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4); // max ping delay is 1/4 of pingInterval
     },
   },
 
@@ -165,6 +197,7 @@ module.exports = {
     this.createWSServer();
   },
   stopped() {
+    clearInterval(this.pingIntervalHandler);
     this.ws.close();
   }
 };
