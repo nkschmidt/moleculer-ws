@@ -140,7 +140,7 @@ module.exports = {
           this.logger.warn(err)
           return
         }
-        this.logger.error(err)
+        this.logger.error(err, ws.meta)
       });
       ws.communicatedAt = Date.now();
     },
