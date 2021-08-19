@@ -2,8 +2,6 @@ const uuidv4 = require('uuid/v4');
 const WebSocket = require('ws');
 const jsonrpc = require('jsonrpc-lite')
 
-function noop() {}
-
 module.exports = {
   settings: {
     port: 3000,
@@ -175,7 +173,7 @@ module.exports = {
           if (timestamp - client.communicatedAt >= pingInterval) {
             ++pingsCounter;
             client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift
-            client.ping(noop);
+            client.send('');
           }
         }
         this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4);
