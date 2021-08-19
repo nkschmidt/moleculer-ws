@@ -173,7 +173,7 @@ module.exports = {
           if (timestamp - client.communicatedAt >= pingInterval) {
             ++pingsCounter;
             client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift
-            client.send('');
+            client.ping('p');
           }
         }
         this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4);
