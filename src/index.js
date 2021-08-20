@@ -12,7 +12,7 @@ module.exports = {
       maxPayload: 200 * 1024 * 1024,
       pingInterval: 60 * 1000,
       maxSimultaneousPings: 2000,
-      delayBetweenPingsSimultaneousDelay: 1000,
+      delayBetweenSimultaneousPings: 1000,
     },
   },
   methods: {
@@ -157,7 +157,7 @@ module.exports = {
 
       const pingInterval = this.settings.options.pingInterval;
       const maxSimultaneousPings = this.settings.options.maxSimultaneousPings;
-      const delayBetweenPingsSimultaneousDelay = this.settings.options.delayBetweenPingsSimultaneousDelay;
+      const delayBetweenSimultaneousPings = this.settings.options.delayBetweenSimultaneousPings;
       const pinger = async () => {
         let timestamp = Date.now();
         let pingsCounter = 0;
@@ -165,15 +165,15 @@ module.exports = {
         for (const clientId in this.clients) {
           // limit the number of simultaneous pings
           if (pingsCounter && !(pingsCounter % maxSimultaneousPings)) {
-            await new Promise(r => setTimeout(r, delayBetweenPingsSimultaneousDelay));
-            timestamp += delayBetweenPingsSimultaneousDelay;
+            await new Promise(r => setTimeout(r, delayBetweenSimultaneousPings));
+            timestamp += delayBetweenSimultaneousPings;
           }
 
           const client = this.clients[clientId];
-          if (timestamp - client.communicatedAt >= pingInterval) {
+          if (client && timestamp - client.communicatedAt >= pingInterval) {
             ++pingsCounter;
-            client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift
-            client.ping('p');
+            client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift (mac+docker https://www.docker.com/blog/addressing-time-drift-in-docker-desktop-for-mac/)
+            client.ping('p'); // ping with payload to solve a bug with react-native websocket implementation on ios
           }
         }
         this.pingIntervalHandler = setTimeout(pinger, pingInterval / 4);
