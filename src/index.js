@@ -138,7 +138,7 @@ module.exports = {
           this.logger.warn(err)
           return
         }
-        this.logger.error(err, ws.meta)
+        this.logger.error('moleculer-ws error:', err, ws.meta)
       });
       ws.communicatedAt = Date.now();
     },
