@@ -172,7 +172,7 @@ module.exports = {
           const client = this.clients[clientId];
           if (client && timestamp - client.communicatedAt >= pingInterval) {
             ++pingsCounter;
-            client.communicatedAt = timestamp - 500; // -500 to compensate for setTimeout shift (mac+docker https://www.docker.com/blog/addressing-time-drift-in-docker-desktop-for-mac/)
+            client.communicatedAt = timestamp; // add -500 to compensate for setTimeout shift if using mac+docker (https://www.docker.com/blog/addressing-time-drift-in-docker-desktop-for-mac/)
             client.ping('p'); // ping with payload to solve a bug with react-native websocket implementation on ios
           }
         }
