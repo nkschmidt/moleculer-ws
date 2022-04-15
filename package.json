@@ -23,8 +23,6 @@
   "homepage": "https://github.com/NikSmith/moleculer-ws#readme",
   "dependencies": {
     "jsonrpc-lite": "^2.1.0",
-    "moleculer": "^0.14.2",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v17.1.0",
     "uuid": "^3.3.3",
     "ws": "^7.2.1"
   }
