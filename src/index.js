@@ -134,6 +134,12 @@ module.exports = {
         delete this.clients[ws.id];
       });
       ws.on('error', (err) => {
+        if (typeof this.onError === 'function') {
+          this.onError(err, ws);
+          return;
+        }
+
+        // default implementation
         if (err.message === "Invalid WebSocket frame: RSV1 must be clear") {
           this.logger.warn(err)
           return
